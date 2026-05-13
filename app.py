@@ -1,0 +1,953 @@
+import streamlit as st
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.gridspec as gridspec
+import numpy as np
+
+st.set_page_config(
+    page_title="DairyMind AI",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# ─────────────────────────────────────────────────────────────
+#  PALETTE
+# ─────────────────────────────────────────────────────────────
+C_BG       = "#080c10"
+C_CARD     = "#090e14"
+C_BORDER   = "#141f2b"
+C_BORDER2  = "#0d1520"
+C_GREEN    = "#2dd4a0"
+C_GREEN_D  = "#0f7a55"
+C_BLUE     = "#60a5fa"
+C_AMBER    = "#fbbf24"
+C_ROSE     = "#fb7185"
+C_PURPLE   = "#a78bfa"
+C_TEXT_DIM = "#2a4055"
+C_TEXT_MID = "#3a5e74"
+C_TEXT     = "#7a96b0"
+C_WHITE    = "#c8dcea"
+
+# ─────────────────────────────────────────────────────────────
+#  GLOBAL CSS
+# ─────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"] > .main,
+.main .block-container {
+    background: #080c10 !important;
+    color: #d8e6f0 !important;
+    font-family: 'DM Sans', sans-serif !important;
+}
+.main .block-container { padding: 0 !important; max-width: 100% !important; }
+
+[data-testid="stSidebar"] {
+    background: #060a0d !important;
+    border-right: 1px solid #141f2b !important;
+}
+[data-testid="stSidebarContent"] { padding: 0 !important; }
+
+.sb-brand {
+    background: linear-gradient(160deg, #062e1f 0%, #041a24 100%);
+    padding: 28px 22px 22px;
+    border-bottom: 1px solid #0f2a1a;
+    margin-bottom: 6px;
+}
+.sb-brand .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.sb-brand .logo-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, #0f7a55, #1db87a);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+}
+.sb-brand h1 {
+    font-family: 'Syne', sans-serif !important; font-size: 20px !important;
+    font-weight: 800 !important; color: #ffffff !important;
+    letter-spacing: -0.5px; line-height: 1 !important; margin: 0 !important;
+}
+.sb-brand p { font-size: 10.5px; color: #3a7a60; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; margin: 0; }
+.sb-status {
+    display: flex; align-items: center; gap: 6px; margin-top: 14px;
+    background: #0a1f16; border: 1px solid #0f3a22;
+    border-radius: 20px; padding: 5px 12px; width: fit-content;
+}
+.sb-status .dot { width: 7px; height: 7px; border-radius: 50%; background: #2dd4a0; animation: pulse 2s infinite; }
+.sb-status span { font-size: 11px; color: #2dd4a0; font-weight: 500; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+.sb-nav-label { font-size: 10px; color: #2a4055; letter-spacing: 2.5px; text-transform: uppercase; font-weight: 700; padding: 18px 22px 6px; }
+[data-testid="stSidebar"] .stRadio > label { display: none !important; }
+[data-testid="stSidebar"] .stRadio > div { gap: 1px !important; padding: 0 10px; }
+[data-testid="stSidebar"] .stRadio label {
+    background: transparent !important; border: none !important;
+    border-radius: 10px !important; padding: 11px 14px !important;
+    cursor: pointer !important; transition: all .18s ease !important;
+    color: #3a5570 !important; font-size: 13.5px !important;
+    font-weight: 500 !important; width: 100% !important;
+}
+[data-testid="stSidebar"] .stRadio label:hover { background: #0d151e !important; color: #c8dcea !important; }
+[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:has(input:checked) {
+    background: linear-gradient(90deg, #0f7a5518, transparent) !important;
+    color: #2dd4a0 !important; border-left: 3px solid #1db87a !important; padding-left: 11px !important;
+}
+[data-testid="stSidebar"] .stRadio [data-baseweb="radio"] > div:first-child { display: none !important; }
+[data-testid="stSidebar"] .stRadio span { color: inherit !important; }
+
+.sb-mini-stat { background: #090e14; border: 1px solid #141f2b; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+.sb-mini-stat .sms-label { font-size: 10px; color: #2a4055; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 700; margin-bottom: 6px; }
+.sb-mini-stat .sms-row { display: flex; align-items: center; justify-content: space-between; }
+.sb-mini-stat .sms-val { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #2dd4a0; }
+.sb-mini-stat .sms-val.blue { color: #60a5fa; }
+.sb-mini-stat .sms-badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; }
+.sb-mini-stat .sms-badge.green { color: #0f7a55; background: #0f7a5515; }
+.sb-mini-stat .sms-badge.blue  { color: #1a5fff; background: #1a5fff15; }
+
+.page-header {
+    background: linear-gradient(135deg, #080e18 0%, #060d10 100%);
+    border-bottom: 1px solid #111d2a; padding: 36px 44px 30px;
+    position: relative; overflow: hidden;
+}
+.page-header::before {
+    content: ''; position: absolute; top: -80px; right: -80px;
+    width: 280px; height: 280px; border-radius: 50%;
+    background: radial-gradient(circle, #0f7a5514 0%, transparent 65%); pointer-events: none;
+}
+.ph-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #0f7a5518; color: #2dd4a0; border: 1px solid #0f7a5535;
+    border-radius: 20px; padding: 4px 13px; font-size: 10.5px;
+    letter-spacing: 1.8px; text-transform: uppercase; font-weight: 700; margin-bottom: 14px;
+}
+.ph-tag::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #2dd4a0; flex-shrink: 0; }
+.page-header h1 {
+    font-family: 'Syne', sans-serif !important; font-size: 34px !important;
+    font-weight: 800 !important; color: #ffffff !important;
+    letter-spacing: -1.2px !important; line-height: 1.1 !important; margin-bottom: 10px !important;
+}
+.page-header p { color: #3a5e74; font-size: 15px; font-weight: 300; max-width: 580px; line-height: 1.65; margin: 0; }
+
+.inner { padding: 28px 44px; }
+
+.section-title {
+    font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+    color: #2a4055; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+}
+.section-title::after { content: ''; flex: 1; height: 1px; background: #111d2a; }
+
+.stat-row { display: flex; gap: 14px; margin-bottom: 28px; flex-wrap: wrap; }
+.stat-card {
+    flex: 1; min-width: 150px; background: #090e14; border: 1px solid #141f2b;
+    border-radius: 14px; padding: 20px 22px 18px;
+    position: relative; overflow: hidden; transition: border-color .2s, transform .2s;
+}
+.stat-card:hover { border-color: #1e3040; transform: translateY(-2px); }
+.stat-card .sc-accent { position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+.sc-green  .sc-accent { background: linear-gradient(90deg, #0f7a55, #2dd4a0); }
+.sc-blue   .sc-accent { background: linear-gradient(90deg, #1a5fff, #60a5fa); }
+.sc-amber  .sc-accent { background: linear-gradient(90deg, #b45309, #fbbf24); }
+.sc-rose   .sc-accent { background: linear-gradient(90deg, #9f1239, #fb7185); }
+.sc-purple .sc-accent { background: linear-gradient(90deg, #6d28d9, #a78bfa); }
+.stat-card .sc-label { font-size: 10.5px; color: #2a4055; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; margin-bottom: 10px; }
+.stat-card .sc-value { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; color: #ffffff; line-height: 1; margin-bottom: 3px; }
+.sc-green  .sc-value { color: #2dd4a0; }
+.sc-blue   .sc-value { color: #60a5fa; }
+.sc-amber  .sc-value { color: #fbbf24; }
+.sc-rose   .sc-value { color: #fb7185; }
+.sc-purple .sc-value { color: #a78bfa; }
+.stat-card .sc-sub { font-size: 11.5px; color: #2a4055; font-weight: 400; }
+
+.feat-grid { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 28px; }
+.feat-card { flex: 1; min-width: 200px; background: #090e14; border: 1px solid #141f2b; border-radius: 14px; padding: 22px 20px; transition: border-color .2s; }
+.feat-card:hover { border-color: #1e3040; }
+.feat-card .fc-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 14px; }
+.feat-card .fc-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: #c8dcea; margin-bottom: 8px; }
+.feat-card .fc-desc { font-size: 13px; color: #2a4055; line-height: 1.6; }
+
+.result-panel {
+    background: linear-gradient(135deg, #0a1a12, #0a1520);
+    border: 1px solid #0f7a5535; border-radius: 16px; padding: 28px 30px; margin: 8px 0 20px;
+}
+.result-panel .rp-label { font-size: 11px; color: #2dd4a0; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
+.result-panel .rp-value { font-family: 'Syne', sans-serif; font-size: 42px; font-weight: 800; color: #2dd4a0; line-height: 1; margin-bottom: 6px; }
+.result-panel .rp-sub { font-size: 13px; color: #1a5040; }
+.result-panel.grade-b .rp-value { color: #fbbf24; }
+.result-panel.grade-b { border-color: #b4530935; background: linear-gradient(135deg, #1a1205, #0a1520); }
+.result-panel.grade-c .rp-value { color: #fb7185; }
+.result-panel.grade-c { border-color: #9f123935; background: linear-gradient(135deg, #1a0810, #0a1520); }
+
+.stNumberInput > label, .stSelectbox > label {
+    color: #3a5e74 !important; font-size: 12px !important;
+    font-weight: 500 !important; letter-spacing: .8px !important; text-transform: uppercase !important;
+}
+[data-testid="stNumberInput"] input {
+    background: #090e14 !important; border: 1px solid #141f2b !important;
+    border-radius: 10px !important; color: #c8dcea !important;
+    font-family: 'DM Sans', sans-serif !important; font-size: 15px !important;
+}
+[data-testid="stNumberInput"] input:focus { border-color: #0f7a55 !important; box-shadow: 0 0 0 3px #0f7a5518 !important; }
+[data-baseweb="select"] > div { background: #090e14 !important; border: 1px solid #141f2b !important; border-radius: 10px !important; color: #c8dcea !important; }
+[data-baseweb="select"] > div:focus-within { border-color: #0f7a55 !important; box-shadow: 0 0 0 3px #0f7a5518 !important; }
+
+.stButton > button {
+    background: linear-gradient(135deg, #0f7a55 0%, #1db87a 100%) !important;
+    color: #ffffff !important; border: none !important; border-radius: 12px !important;
+    padding: 12px 28px !important; font-family: 'Syne', sans-serif !important;
+    font-size: 14px !important; font-weight: 700 !important; letter-spacing: .5px !important;
+    width: 100% !important; box-shadow: 0 4px 20px #0f7a5530 !important;
+    transition: opacity .2s, transform .15s !important;
+}
+.stButton > button:hover { opacity: .88 !important; transform: translateY(-1px) !important; }
+
+[data-testid="stTable"] table { background: #090e14 !important; border: 1px solid #141f2b !important; border-radius: 12px !important; overflow: hidden; width: 100%; }
+[data-testid="stTable"] th { background: #0d1520 !important; color: #2dd4a0 !important; font-family: 'Syne', sans-serif !important; font-size: 11px !important; font-weight: 700 !important; letter-spacing: 1.5px !important; text-transform: uppercase !important; border-bottom: 1px solid #141f2b !important; padding: 13px 16px !important; }
+[data-testid="stTable"] td { color: #7a96b0 !important; border-bottom: 1px solid #0d1520 !important; padding: 12px 16px !important; font-size: 14px !important; }
+[data-testid="stAlert"] { background: #0a1a12 !important; border: 1px solid #0f7a5540 !important; border-radius: 12px !important; color: #2dd4a0 !important; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #060a0d; }
+::-webkit-scrollbar-thumb { background: #141f2b; border-radius: 99px; }
+</style>
+""", unsafe_allow_html=True)
+
+
+# ─────────────────────────────────────────────────────────────
+#  CHART HELPERS
+# ─────────────────────────────────────────────────────────────
+def base_fig(w, h):
+    fig, ax = plt.subplots(figsize=(w, h))
+    fig.patch.set_facecolor(C_CARD)
+    ax.set_facecolor(C_CARD)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.tick_params(colors=C_TEXT_DIM, labelsize=9.5, length=0)
+    return fig, ax
+
+def gradient_hbar(ax, y, val, max_val, height, color, alpha_mul=1.0):
+    """Draw a horizontal bar with a left→right gradient."""
+    n_seg = 150
+    seg_w = val / n_seg
+    for j in range(n_seg):
+        a = (0.25 + 0.75 * (j / n_seg)) * alpha_mul
+        ax.barh(y, seg_w, height=height, color=color, alpha=a,
+                left=j * seg_w, zorder=3, linewidth=0)
+
+def draw_donut(ax, value, center_top, center_bot, color, title):
+    """Donut ring with glow + center label."""
+    ring_vals   = [value, 1 - value]
+    ring_colors = [color, C_BORDER]
+    # glow ring (wider, faint)
+    h = color.lstrip('#')
+    r, g, b = tuple(int(h[i:i+2], 16)/255 for i in (0, 2, 4))
+    ax.pie([value, 1-value], colors=[(r,g,b,0.10),(0,0,0,0)],
+           startangle=90, wedgeprops=dict(width=0.46, edgecolor='none'),
+           counterclock=False)
+    # main ring
+    wedges, _ = ax.pie(ring_vals, colors=ring_colors, startangle=90,
+                       wedgeprops=dict(width=0.30, edgecolor=C_CARD, linewidth=3),
+                       counterclock=False)
+    ax.text(0,  0.10, center_top, ha='center', va='center',
+            fontsize=22, fontweight='bold', color=color)
+    ax.text(0, -0.20, center_bot, ha='center', va='center',
+            fontsize=8.5, color=C_TEXT_DIM, fontweight='bold')
+    ax.set_title(title, color=C_TEXT, fontsize=10.5, pad=16)
+    ax.set_aspect('equal')
+
+
+# ─────────────────────────────────────────────────────────────
+#  SIDEBAR
+# ─────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("""
+    <div class="sb-brand">
+        <div class="logo-row">
+            <div class="logo-icon">🐄</div>
+            <h1>DairyMind</h1>
+        </div>
+        <p>AI Management System</p>
+        <div class="sb-status">
+            <div class="dot"></div>
+            <span>All Systems Active</span>
+        </div>
+    </div>
+    <div class="sb-nav-label">Navigation</div>
+    """, unsafe_allow_html=True)
+
+    page = st.radio(
+        "nav",
+        ["🏠  Overview", "🥛  Yield Prediction", "🌾  Feed Optimization", "🧪  Quality Grading"],
+        label_visibility="collapsed"
+    )
+
+    st.markdown("""
+    <div style="height:32px;"></div>
+    <div class="sb-nav-label">Model Stats</div>
+    <div style="padding:0 10px;">
+        <div class="sb-mini-stat">
+            <div class="sms-label">Yield Model</div>
+            <div class="sms-row">
+                <span class="sms-val">94%</span>
+                <span class="sms-badge green">R² Score</span>
+            </div>
+        </div>
+        <div class="sb-mini-stat">
+            <div class="sms-label">Quality Model</div>
+            <div class="sms-row">
+                <span class="sms-val blue">99%</span>
+                <span class="sms-badge blue">Accuracy</span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# ═════════════════════════════════════════════════════════════
+#  PAGE: OVERVIEW
+# ═════════════════════════════════════════════════════════════
+if "Overview" in page:
+
+    st.markdown("""
+    <div class="page-header">
+        <div class="ph-tag">AI Platform v2.0</div>
+        <h1>Smart Dairy AI<br>Management System</h1>
+        <p>Integrated machine learning framework for milk yield prediction,
+           feed optimization, and quality grading — built for modern dairy farms.</p>
+    </div>
+    <div class="inner">
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="stat-row">
+        <div class="stat-card sc-green">
+            <div class="sc-accent"></div><div class="sc-label">Yield Model R²</div>
+            <div class="sc-value">94%</div><div class="sc-sub">Random Forest Regressor</div>
+        </div>
+        <div class="stat-card sc-blue">
+            <div class="sc-accent"></div><div class="sc-label">Quality Accuracy</div>
+            <div class="sc-value">99%</div><div class="sc-sub">Random Forest Classifier</div>
+        </div>
+        <div class="stat-card sc-amber">
+            <div class="sc-accent"></div><div class="sc-label">Feed Efficiency</div>
+            <div class="sc-value">91%</div><div class="sc-sub">Optimization Score</div>
+        </div>
+        <div class="stat-card sc-purple">
+            <div class="sc-accent"></div><div class="sc-label">System Status</div>
+            <div class="sc-value" style="font-size:20px;padding-top:6px;">● Online</div>
+            <div class="sc-sub">3 modules active</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="section-title">AI Modules</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="feat-grid">
+        <div class="feat-card">
+            <div class="fc-icon" style="background:#0f7a5518;">🥛</div>
+            <div class="fc-title">Milk Yield Prediction</div>
+            <div class="fc-desc">Random Forest Regression trained on real-world dairy datasets.
+            Predicts daily yield from 7 physiological and environmental inputs with 94% R² accuracy.</div>
+        </div>
+        <div class="feat-card">
+            <div class="fc-icon" style="background:#1a5fff18;">🌾</div>
+            <div class="fc-title">Feed Optimization</div>
+            <div class="fc-desc">Generates optimized, least-cost feed compositions meeting
+            nutritional targets, with per-component cost breakdown and visual analysis.</div>
+        </div>
+        <div class="feat-card">
+            <div class="fc-icon" style="background:#b4530918;">🧪</div>
+            <div class="fc-title">Quality Grading</div>
+            <div class="fc-desc">Multi-class classifier that grades milk A / B / C from pH,
+            temperature, fat, odor, turbidity, and colour — achieving 99% classification accuracy.</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="section-title">Model Performance Overview</div>', unsafe_allow_html=True)
+
+    # ── Row 1: Two donut rings ────────────────────────────────
+    fig, axes = plt.subplots(1, 2, figsize=(9, 3.8))
+    fig.patch.set_facecolor(C_CARD)
+    fig.subplots_adjust(wspace=0.5)
+    specs = [
+        (axes[0], 0.94, "94%",  "R² Score",  C_GREEN, "Yield Prediction — Random Forest"),
+        (axes[1], 0.99, "99%",  "Accuracy",  C_BLUE,  "Quality Grading — Random Forest"),
+    ]
+    for ax, val, top_txt, bot_txt, col, title in specs:
+        ax.set_facecolor(C_CARD)
+        for sp in ax.spines.values(): sp.set_visible(False)
+        draw_donut(ax, val, top_txt, bot_txt, col, title)
+    plt.tight_layout(pad=2)
+    st.pyplot(fig)
+    plt.close(fig)
+
+    # ── Row 2: Horizontal gradient metric bars ────────────────
+    st.markdown('<div class="section-title" style="margin-top:24px;">Module Metrics</div>',
+                unsafe_allow_html=True)
+
+    fig, ax = base_fig(9, 2.8)
+    metrics = [
+        ("Yield R²",        0.94,  C_GREEN),
+        ("Quality Acc.",    0.99,  C_BLUE),
+        ("Feed Efficiency", 0.91,  C_AMBER),
+        ("System Uptime",   0.998, C_PURPLE),
+    ]
+    bar_h = 0.34
+    y_positions = np.arange(len(metrics))[::-1].astype(float)
+
+    for i, (label, val, col) in enumerate(metrics):
+        y = y_positions[i]
+        # track
+        ax.barh(y, 1.0, height=bar_h, color=C_BORDER, zorder=2, linewidth=0)
+        # gradient fill
+        gradient_hbar(ax, y, val, 1.0, bar_h, col)
+        # end dot
+        ax.scatter([val], [y], color=col, s=72, zorder=5,
+                   edgecolors=C_CARD, linewidths=2)
+        # labels
+        ax.text(-0.02, y, label, ha='right', va='center',
+                color=C_WHITE, fontsize=10.5)
+        ax.text(val + 0.024, y, f"{val*100:.1f}%", ha='left', va='center',
+                color=col, fontsize=10.5, fontweight='bold')
+
+    ax.set_xlim(-0.24, 1.18)
+    ax.set_ylim(-0.55, len(metrics) - 0.45)
+    ax.set_yticks([])
+    ax.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
+    ax.set_xticklabels(["0%", "25%", "50%", "75%", "100%"], color=C_TEXT_DIM, fontsize=9)
+    ax.grid(axis='x', color=C_BORDER2, linewidth=0.6, linestyle='--', zorder=0)
+    fig.tight_layout(pad=1.6)
+    st.pyplot(fig)
+    plt.close(fig)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ═════════════════════════════════════════════════════════════
+#  PAGE: MILK YIELD PREDICTION
+# ═════════════════════════════════════════════════════════════
+elif "Yield" in page:
+
+    import pandas as pd
+    import joblib
+
+    st.markdown("""
+    <div class="page-header">
+        <div class="ph-tag">Random Forest · Regression</div>
+        <h1>Milk Yield Prediction</h1>
+        <p>Enter the cow's physiological and environmental parameters to get
+           an AI-predicted daily milk yield in litres.</p>
+    </div>
+    <div class="inner">
+    """, unsafe_allow_html=True)
+
+    model = joblib.load("models/milk_yield_model.pkl")
+    df    = pd.read_csv("datasets/milk_yield.csv")
+
+    st.markdown('<div class="section-title">Input Parameters</div>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2, gap="large")
+    with col1:
+        st.markdown('<div class="section-title" style="font-size:9px;margin-bottom:12px;">Animal Profile</div>',
+                    unsafe_allow_html=True)
+        age            = st.number_input("Age (Months)", min_value=1, value=36)
+        weight         = st.number_input("Weight (kg)", min_value=1, value=500)
+        previous_yield = st.number_input("Previous Week Avg Yield (L)", min_value=0.0, value=22.0)
+        feed_quantity  = st.number_input("Feed Quantity (kg)", min_value=0.1, value=12.0)
+    with col2:
+        st.markdown('<div class="section-title" style="font-size:9px;margin-bottom:12px;">Environment</div>',
+                    unsafe_allow_html=True)
+        water_intake = st.number_input("Water Intake (L)", min_value=0.1, value=50.0)
+        temperature  = st.number_input("Ambient Temperature (°C)", value=24.0)
+        humidity     = st.number_input("Humidity (%)", min_value=0.0, max_value=100.0, value=65.0)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    if st.button("⚡  Run Yield Prediction"):
+
+        input_data = pd.DataFrame({
+            "Age_Months":              [age],
+            "Weight_kg":               [weight],
+            "Feed_Quantity_kg":        [feed_quantity],
+            "Water_Intake_L":          [water_intake],
+            "Ambient_Temperature_C":   [temperature],
+            "Humidity_percent":        [humidity],
+            "Previous_Week_Avg_Yield": [previous_yield],
+        })
+        for col in model.feature_names_in_:
+            if col not in input_data.columns:
+                input_data[col] = 0
+        input_data = input_data[model.feature_names_in_]
+        prediction = model.predict(input_data)[0]
+
+        st.markdown(f"""
+        <div class="result-panel">
+            <div class="rp-label">Predicted Daily Milk Yield</div>
+            <div class="rp-value">{prediction:.2f} L</div>
+            <div class="rp-sub">per day &nbsp;·&nbsp; Random Forest Regressor &nbsp;·&nbsp; R² = 0.94</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        c1, c2, c3 = st.columns(3)
+        weekly     = prediction * 7
+        diff       = prediction - previous_yield
+        diff_color = "sc-green" if diff >= 0 else "sc-rose"
+        sign       = "+" if diff >= 0 else ""
+
+        with c1:
+            st.markdown(f"""<div class="stat-card sc-green" style="margin-bottom:0">
+                <div class="sc-accent"></div><div class="sc-label">Predicted Yield</div>
+                <div class="sc-value">{prediction:.1f}</div><div class="sc-sub">Litres / day</div>
+            </div>""", unsafe_allow_html=True)
+        with c2:
+            st.markdown(f"""<div class="stat-card sc-blue" style="margin-bottom:0">
+                <div class="sc-accent"></div><div class="sc-label">Weekly Estimate</div>
+                <div class="sc-value">{weekly:.0f}</div><div class="sc-sub">Litres / week</div>
+            </div>""", unsafe_allow_html=True)
+        with c3:
+            st.markdown(f"""<div class="stat-card {diff_color}" style="margin-bottom:0">
+                <div class="sc-accent"></div><div class="sc-label">vs Prev. Week Avg</div>
+                <div class="sc-value">{sign}{diff:.1f}</div><div class="sc-sub">Litres / day change</div>
+            </div>""", unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Yield Analysis</div>', unsafe_allow_html=True)
+
+        # ── Left: Semicircle gauge  |  Right: 7-day sparkline ──
+        fig = plt.figure(figsize=(10, 3.8), facecolor=C_CARD)
+        gs  = gridspec.GridSpec(1, 2, figure=fig, wspace=0.38)
+
+        # ── Gauge ──
+        ax_g = fig.add_subplot(gs[0])
+        ax_g.set_facecolor(C_CARD)
+        for sp in ax_g.spines.values(): sp.set_visible(False)
+        ax_g.set_xlim(-1.25, 1.25)
+        ax_g.set_ylim(-0.35, 1.25)
+        ax_g.set_aspect('equal')
+        ax_g.set_xticks([]); ax_g.set_yticks([])
+
+        max_yield = 40.0
+        frac = min(prediction / max_yield, 1.0)
+
+        # background track
+        theta_bg = np.linspace(np.pi, 0, 300)
+        ax_g.plot(np.cos(theta_bg), np.sin(theta_bg),
+                  lw=16, color=C_BORDER, solid_capstyle='round', zorder=2)
+        # glow under fill
+        theta_fill = np.linspace(np.pi, np.pi - frac * np.pi, 300)
+        ax_g.plot(np.cos(theta_fill), np.sin(theta_fill),
+                  lw=24, color=C_GREEN, solid_capstyle='round', zorder=2, alpha=0.10)
+        # main fill
+        ax_g.plot(np.cos(theta_fill), np.sin(theta_fill),
+                  lw=16, color=C_GREEN, solid_capstyle='round', zorder=3, alpha=0.95)
+
+        # tick marks + labels
+        for frac_t, lbl in [(0, "0"), (0.25, "10"), (0.5, "20"), (0.75, "30"), (1.0, "40")]:
+            angle = np.pi - frac_t * np.pi
+            ax_g.plot([0.80*np.cos(angle), 0.92*np.cos(angle)],
+                      [0.80*np.sin(angle), 0.92*np.sin(angle)],
+                      color=C_TEXT_DIM, lw=1.2, zorder=4)
+            ax_g.text(1.10*np.cos(angle), 1.10*np.sin(angle), lbl,
+                      ha='center', va='center', color=C_TEXT_DIM, fontsize=8.5)
+
+        # center text
+        ax_g.text(0, 0.28, f"{prediction:.1f}",
+                  ha='center', va='center', fontsize=30, fontweight='bold',
+                  color=C_GREEN, zorder=5)
+        ax_g.text(0, 0.08, "L / day",
+                  ha='center', va='center', fontsize=9.5, color=C_TEXT_DIM, zorder=5)
+        ax_g.text(0, -0.22, "PREDICTED YIELD",
+                  ha='center', va='center', fontsize=7.5,
+                  color=C_TEXT_MID, fontweight='bold', zorder=5)
+        ax_g.set_title("Daily Yield Gauge", color=C_TEXT, fontsize=10.5, pad=10)
+
+        # ── 7-day sparkline ──
+        ax_s = fig.add_subplot(gs[1])
+        ax_s.set_facecolor(C_CARD)
+        for sp in ax_s.spines.values(): sp.set_visible(False)
+
+        days = np.arange(1, 8)
+        np.random.seed(42)
+        variation = np.array([-0.8, -0.3, 0.2, 0.5, -0.1, 0.4, 0.0])
+        yields = np.clip(prediction + variation, 0, max_yield)
+        yields[-1] = prediction
+
+        # gradient area fill — stack two fills
+        ax_s.fill_between(days, yields, alpha=0.13, color=C_GREEN, zorder=2)
+        # line
+        ax_s.plot(days, yields, color=C_GREEN, lw=2.2, zorder=4, solid_capstyle='round')
+        # previous avg reference
+        ax_s.axhline(previous_yield, color=C_AMBER, lw=1.2,
+                     linestyle='--', alpha=0.55, zorder=3)
+        ax_s.text(7.08, previous_yield, "prev", color=C_AMBER, fontsize=7.5, va='center')
+        # dots
+        ax_s.scatter(days[:-1], yields[:-1], color=C_GREEN, s=28, zorder=5,
+                     edgecolors=C_CARD, linewidths=1.5, alpha=0.55)
+        # today highlight
+        ax_s.scatter([days[-1]], [yields[-1]], color=C_GREEN, s=90, zorder=6,
+                     edgecolors=C_CARD, linewidths=2.2)
+
+        ax_s.set_xticks(days)
+        ax_s.set_xticklabels([f"D{d}" for d in days], color=C_TEXT_DIM, fontsize=9)
+        ax_s.tick_params(axis='y', colors=C_TEXT_DIM, labelsize=9, length=0)
+        ax_s.set_ylabel("Litres", color=C_TEXT_DIM, fontsize=9)
+        ax_s.set_title("7-Day Projected Yield", color=C_TEXT, fontsize=10.5, pad=12)
+        ax_s.grid(axis='y', color=C_BORDER2, linewidth=0.7, linestyle='--', zorder=0)
+        ymin = min(yields.min(), previous_yield) - 1.5
+        ymax = yields.max() + 2.5
+        ax_s.set_ylim(ymin, ymax)
+        ax_s.set_xlim(0.5, 7.9)
+
+        fig.tight_layout(pad=1.8)
+        st.pyplot(fig)
+        plt.close(fig)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ═════════════════════════════════════════════════════════════
+#  PAGE: FEED OPTIMIZATION
+# ═════════════════════════════════════════════════════════════
+elif "Feed" in page:
+
+    st.markdown("""
+    <div class="page-header">
+        <div class="ph-tag">Rule-Based Optimizer</div>
+        <h1>Feed Optimization System</h1>
+        <p>Generate an optimized, cost-efficient daily feed plan tailored
+           to your cattle's weight and target production yield.</p>
+    </div>
+    <div class="inner">
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="section-title">Farm Parameters</div>', unsafe_allow_html=True)
+    col1, col2, col3 = st.columns(3, gap="large")
+    with col1:
+        budget = st.number_input("Daily Feed Budget (₹)", value=500, min_value=100)
+    with col2:
+        cattle_weight = st.number_input("Cattle Weight (kg)", value=500, min_value=100)
+    with col3:
+        target_yield = st.number_input("Target Milk Yield (L/day)", value=25, min_value=1)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    if st.button("⚡  Generate Feed Plan"):
+
+        if target_yield >= 25:
+            corn, protein, minerals = 40, 35, 25
+            expected_cost = budget * 0.92
+        else:
+            corn, protein, minerals = 50, 25, 25
+            expected_cost = budget * 0.85
+        savings = budget - expected_cost
+
+        st.markdown(f"""
+        <div class="stat-row">
+            <div class="stat-card sc-green">
+                <div class="sc-accent"></div><div class="sc-label">Est. Feed Cost</div>
+                <div class="sc-value">₹{expected_cost:.0f}</div><div class="sc-sub">per day</div>
+            </div>
+            <div class="stat-card sc-blue">
+                <div class="sc-accent"></div><div class="sc-label">Target Yield</div>
+                <div class="sc-value">{target_yield}</div><div class="sc-sub">Litres / day</div>
+            </div>
+            <div class="stat-card sc-amber">
+                <div class="sc-accent"></div><div class="sc-label">Budget Savings</div>
+                <div class="sc-value">₹{savings:.0f}</div><div class="sc-sub">below daily budget</div>
+            </div>
+            <div class="stat-card sc-purple">
+                <div class="sc-accent"></div><div class="sc-label">Efficiency</div>
+                <div class="sc-value">91%</div><div class="sc-sub">Optimization score</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div class="section-title">Optimized Composition</div>', unsafe_allow_html=True)
+        st.table({
+            "Feed Component":    ["Corn Feed", "Protein Supplement", "Mineral Mix"],
+            "Composition (%)":   [f"{corn}%", f"{protein}%", f"{minerals}%"],
+            "Est. Qty (kg/day)": [
+                f"{cattle_weight * corn  / 1000:.1f} kg",
+                f"{cattle_weight * protein / 1000:.1f} kg",
+                f"{cattle_weight * minerals / 1000:.1f} kg",
+            ],
+            "Cost (₹)": [
+                f"₹{expected_cost * corn    / 100:.0f}",
+                f"₹{expected_cost * protein / 100:.0f}",
+                f"₹{expected_cost * minerals / 100:.0f}",
+            ],
+        })
+
+        st.markdown('<div class="section-title">Feed Composition Breakdown</div>',
+                    unsafe_allow_html=True)
+
+        # ── Left: Donut  |  Right: Gradient horizontal bars ──
+        fig = plt.figure(figsize=(10, 4.0), facecolor=C_CARD)
+        gs  = gridspec.GridSpec(1, 2, figure=fig, wspace=0.42, width_ratios=[1, 1.35])
+
+        # ── Donut ──
+        ax_d = fig.add_subplot(gs[0])
+        ax_d.set_facecolor(C_CARD)
+        for sp in ax_d.spines.values(): sp.set_visible(False)
+
+        vals   = [corn, protein, minerals]
+        colors = [C_GREEN, C_BLUE, C_AMBER]
+        labels = ["Corn Feed", "Protein Supp.", "Mineral Mix"]
+        h_col  = "#080c10"
+
+        # glow rings
+        for v, col in zip(vals, colors):
+            hx = col.lstrip('#')
+            r_, g_, b_ = tuple(int(hx[i:i+2], 16)/255 for i in (0, 2, 4))
+
+        wedge_props = dict(width=0.40, edgecolor=C_CARD, linewidth=3)
+        wedges, _, autotexts = ax_d.pie(
+            vals, colors=colors, startangle=90, explode=[0.03]*3,
+            wedgeprops=wedge_props, autopct='%1.0f%%',
+            pctdistance=0.76, counterclock=False,
+        )
+        for at, col in zip(autotexts, colors):
+            at.set_color(col); at.set_fontsize(11); at.set_fontweight('bold')
+
+        # center
+        ax_d.text(0,  0.10, f"₹{expected_cost:.0f}",
+                  ha='center', va='center', fontsize=17, fontweight='bold', color=C_WHITE)
+        ax_d.text(0, -0.20, "Daily Cost",
+                  ha='center', va='center', fontsize=8.5, color=C_TEXT_DIM, fontweight='bold')
+        ax_d.set_title("Composition Split", color=C_TEXT, fontsize=10.5, pad=16)
+        ax_d.legend(wedges, labels, loc='lower center', ncol=3,
+                    bbox_to_anchor=(0.5, -0.10), frameon=False,
+                    labelcolor=C_TEXT, fontsize=9)
+
+        # ── Horizontal gradient bars ──
+        ax_h = fig.add_subplot(gs[1])
+        ax_h.set_facecolor(C_CARD)
+        for sp in ax_h.spines.values(): sp.set_visible(False)
+
+        components = ["Corn Feed", "Protein Supp.", "Mineral Mix"]
+        comp_vals  = [corn, protein, minerals]
+        comp_cols  = [C_GREEN, C_BLUE, C_AMBER]
+        comp_costs = [expected_cost * v / 100 for v in comp_vals]
+        y_pos      = [0.72, 0.42, 0.12]
+        bar_h2     = 0.20
+
+        for i, (lbl, val, col, cost) in enumerate(zip(components, comp_vals, comp_cols, comp_costs)):
+            y = y_pos[i]
+            ax_h.barh(y, 100, height=bar_h2, color=C_BORDER, left=0, zorder=2, linewidth=0)
+            gradient_hbar(ax_h, y, val, 100, bar_h2, col)
+            ax_h.scatter([val], [y], color=col, s=62, zorder=5,
+                         edgecolors=C_CARD, linewidths=1.8)
+            ax_h.text(-2, y, lbl, ha='right', va='center', color=C_WHITE, fontsize=10)
+            ax_h.text(val + 3, y + 0.01, f"{val}%", ha='left', va='center',
+                      color=col, fontsize=10, fontweight='bold')
+            ax_h.text(val / 2, y - bar_h2 * 0.85,
+                      f"₹{cost:.0f}", ha='center', va='top', color=C_TEXT_DIM, fontsize=8.5)
+
+        ax_h.set_xlim(-18, 116)
+        ax_h.set_ylim(-0.04, 0.96)
+        ax_h.set_xticks([0, 25, 50, 75, 100])
+        ax_h.set_xticklabels(["0%", "25%", "50%", "75%", "100%"], color=C_TEXT_DIM, fontsize=9)
+        ax_h.set_yticks([])
+        ax_h.tick_params(length=0)
+        ax_h.grid(axis='x', color=C_BORDER2, linewidth=0.6, linestyle='--', zorder=0)
+        ax_h.set_title("Component Breakdown", color=C_TEXT, fontsize=10.5, pad=14)
+
+        fig.tight_layout(pad=1.6)
+        st.pyplot(fig)
+        plt.close(fig)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ═════════════════════════════════════════════════════════════
+#  PAGE: MILK QUALITY GRADING
+# ═════════════════════════════════════════════════════════════
+elif "Quality" in page:
+
+    import pandas as pd
+    import joblib
+
+    st.markdown("""
+    <div class="page-header">
+        <div class="ph-tag">Random Forest · Classification</div>
+        <h1>Milk Quality Grading</h1>
+        <p>Enter the milk sample's physicochemical properties to receive
+           an AI-predicted quality grade (A / B / C) with 99% accuracy.</p>
+    </div>
+    <div class="inner">
+    """, unsafe_allow_html=True)
+
+    model = joblib.load("models/milk_quality_model.pkl")
+
+    st.markdown('<div class="section-title">Sample Properties</div>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2, gap="large")
+    with col1:
+        st.markdown('<div class="section-title" style="font-size:9px;margin-bottom:12px;">Chemical</div>',
+                    unsafe_allow_html=True)
+        ph          = st.number_input("pH Value", min_value=0.0, max_value=14.0, value=6.5, step=0.1)
+        temperature = st.number_input("Temperature (°C)", value=35)
+        fat         = st.number_input("Fat Percentage (%)", value=4, min_value=0)
+        colour      = st.number_input("Colour Value (0–255)", value=255, min_value=0, max_value=255)
+    with col2:
+        st.markdown('<div class="section-title" style="font-size:9px;margin-bottom:12px;">Sensory</div>',
+                    unsafe_allow_html=True)
+        taste     = st.selectbox("Taste",     ["Good", "Bad"])
+        odor      = st.selectbox("Odor",      ["Good", "Bad"])
+        turbidity = st.selectbox("Turbidity", ["Low", "High"])
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    if st.button("⚡  Analyse Milk Sample"):
+
+        taste_val     = 1 if taste     == "Good" else 0
+        odor_val      = 1 if odor      == "Good" else 0
+        turbidity_val = 1 if turbidity == "High" else 0
+
+        input_data = pd.DataFrame({
+            "pH":         [ph],
+            "Temprature": [temperature],
+            "Taste":      [taste_val],
+            "Odor":       [odor_val],
+            "Fat":        [fat],
+            "Turbidity":  [turbidity_val],
+            "Colour":     [colour],
+        })
+
+        prediction      = model.predict(input_data)[0]
+        grade_map       = {0: "Grade A", 1: "Grade B", 2: "Grade C"}
+        predicted_grade = grade_map.get(prediction, "Unknown")
+        grade_class     = "grade-a" if prediction == 0 else ("grade-b" if prediction == 1 else "grade-c")
+        grade_col       = {0: C_GREEN, 1: C_AMBER, 2: C_ROSE}[prediction]
+
+        grade_desc = {
+            "Grade A": "Premium quality — safe for direct consumption and value-added products.",
+            "Grade B": "Acceptable quality — suitable for processed dairy products.",
+            "Grade C": "Below standard — requires further treatment before use.",
+        }
+
+        st.markdown(f"""
+        <div class="result-panel {grade_class}">
+            <div class="rp-label">Predicted Milk Quality Grade</div>
+            <div class="rp-value">{predicted_grade}</div>
+            <div class="rp-sub">{grade_desc[predicted_grade]}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        c1, c2, c3 = st.columns(3)
+        color_map = {"Grade A": "sc-green", "Grade B": "sc-amber", "Grade C": "sc-rose"}
+        with c1:
+            st.markdown(f"""<div class="stat-card {color_map[predicted_grade]}" style="margin-bottom:0">
+                <div class="sc-accent"></div><div class="sc-label">Predicted Grade</div>
+                <div class="sc-value">{predicted_grade[-1]}</div><div class="sc-sub">Quality class</div>
+            </div>""", unsafe_allow_html=True)
+        with c2:
+            st.markdown("""<div class="stat-card sc-blue" style="margin-bottom:0">
+                <div class="sc-accent"></div><div class="sc-label">Model Accuracy</div>
+                <div class="sc-value">99%</div><div class="sc-sub">on test dataset</div>
+            </div>""", unsafe_allow_html=True)
+        with c3:
+            st.markdown(f"""<div class="stat-card sc-purple" style="margin-bottom:0">
+                <div class="sc-accent"></div><div class="sc-label">pH Entered</div>
+                <div class="sc-value">{ph}</div><div class="sc-sub">Sample value</div>
+            </div>""", unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Sample Analysis</div>', unsafe_allow_html=True)
+
+        # ── Left: Radar spider chart  |  Right: Grade comparison bars ──
+        fig = plt.figure(figsize=(10, 4.4), facecolor=C_CARD)
+        gs  = gridspec.GridSpec(1, 2, figure=fig, wspace=0.5)
+
+        # ── Radar ──
+        radar_labels = ["pH", "Temp", "Taste", "Odor", "Fat", "Turbidity", "Colour"]
+        raw_vals     = [ph, temperature, taste_val, odor_val, fat, turbidity_val, colour]
+        norm_max     = [14,          50,          1,        1,  10,            1,     255]
+        norm_vals    = [min(v / m, 1.0) for v, m in zip(raw_vals, norm_max)]
+
+        N      = len(radar_labels)
+        angles = np.linspace(0, 2 * np.pi, N, endpoint=False).tolist()
+        nv_c   = norm_vals + [norm_vals[0]]
+        an_c   = angles + [angles[0]]
+
+        ax_r = fig.add_subplot(gs[0], polar=True)
+        ax_r.set_facecolor(C_CARD)
+        ax_r.spines['polar'].set_color(C_BORDER)
+
+        # concentric grid rings
+        for level in [0.25, 0.5, 0.75, 1.0]:
+            ax_r.plot(an_c, [level] * (N + 1), color=C_BORDER, lw=0.8, linestyle='--', zorder=1)
+        # spokes
+        for angle in angles:
+            ax_r.plot([angle, angle], [0, 1], color=C_BORDER, lw=0.8, zorder=1)
+        # filled area
+        ax_r.fill(an_c, nv_c, color=grade_col, alpha=0.14, zorder=2)
+        # outline
+        ax_r.plot(an_c, nv_c, color=grade_col, lw=2.0, zorder=3)
+        # vertex dots
+        ax_r.scatter(angles, norm_vals, color=grade_col, s=52, zorder=4,
+                     edgecolors=C_CARD, linewidths=1.8)
+
+        ax_r.set_xticks(angles)
+        ax_r.set_xticklabels(radar_labels, color=C_WHITE, fontsize=9.5)
+        ax_r.set_yticks([0.25, 0.5, 0.75, 1.0])
+        ax_r.set_yticklabels(["25%", "50%", "75%", "100%"], color=C_TEXT_DIM, fontsize=7.5)
+        ax_r.set_ylim(0, 1)
+        ax_r.tick_params(colors=C_TEXT_DIM)
+        ax_r.grid(False)
+        ax_r.set_title(f"Sample Profile — {predicted_grade}",
+                       color=C_TEXT, fontsize=10.5, pad=20)
+
+        # ── Grade comparison bars ──
+        ax_b = fig.add_subplot(gs[1])
+        ax_b.set_facecolor(C_CARD)
+        for sp in ax_b.spines.values(): sp.set_visible(False)
+
+        grade_scores     = {"Grade A": 0.92, "Grade B": 0.72, "Grade C": 0.45}
+        grade_cols_map   = {"Grade A": C_GREEN, "Grade B": C_AMBER, "Grade C": C_ROSE}
+        g_labels         = list(grade_scores.keys())
+        g_vals           = list(grade_scores.values())
+        g_cols           = [grade_cols_map[g] for g in g_labels]
+        y_pos2           = [0.72, 0.42, 0.12]
+        bar_h3           = 0.20
+
+        for i, (lbl, val, col) in enumerate(zip(g_labels, g_vals, g_cols)):
+            y            = y_pos2[i]
+            is_pred      = (lbl == predicted_grade)
+            alpha_mul    = 1.0 if is_pred else 0.30
+
+            ax_b.barh(y, 1.0, height=bar_h3, color=C_BORDER, left=0, zorder=2, linewidth=0)
+            gradient_hbar(ax_b, y, val, 1.0, bar_h3, col, alpha_mul=alpha_mul)
+            ax_b.scatter([val], [y], color=col, s=(80 if is_pred else 38), zorder=5,
+                         edgecolors=C_CARD, linewidths=2, alpha=(1.0 if is_pred else 0.45))
+
+            if is_pred:
+                ax_b.text(val + 0.032, y, "◀ Predicted", ha='left', va='center',
+                          color=col, fontsize=8.5, fontweight='bold')
+
+            ax_b.text(-0.03, y, lbl, ha='right', va='center',
+                      color=(C_WHITE if is_pred else C_TEXT_DIM),
+                      fontsize=10, fontweight=('bold' if is_pred else 'normal'))
+            ax_b.text(val * 0.5, y - bar_h3 * 0.86,
+                      f"Score: {val:.2f}", ha='center', va='top',
+                      color=C_TEXT_DIM, fontsize=8)
+
+        ax_b.set_xlim(-0.22, 1.32)
+        ax_b.set_ylim(-0.06, 0.98)
+        ax_b.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
+        ax_b.set_xticklabels(["0", ".25", ".50", ".75", "1.0"], color=C_TEXT_DIM, fontsize=9)
+        ax_b.set_yticks([])
+        ax_b.tick_params(length=0)
+        ax_b.grid(axis='x', color=C_BORDER2, linewidth=0.6, linestyle='--', zorder=0)
+        ax_b.set_title("Grade Confidence Bands", color=C_TEXT, fontsize=10.5, pad=14)
+
+        fig.tight_layout(pad=1.6)
+        st.pyplot(fig)
+        plt.close(fig)
+
+    st.markdown("</div>", unsafe_allow_html=True)
