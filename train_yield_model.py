@@ -7,6 +7,7 @@ import joblib
 
 # Load dataset
 df = pd.read_csv("datasets/milk_yield.csv")
+print(df["Previous_Week_Avg_Yield"].describe())
 
 # Drop unnecessary columns
 drop_cols = ["Cattle_ID", "Date", "Farm_ID"]
@@ -27,7 +28,17 @@ for col in df.select_dtypes(include=["object", "string"]).columns:
     label_encoders[col] = le
 
 # Features and target
-X = df.drop("Milk_Yield_L", axis=1)
+X = df[
+    [
+        "Age_Months",
+        "Weight_kg",
+        "Feed_Quantity_kg",
+        "Water_Intake_L",
+        "Ambient_Temperature_C",
+        "Humidity_percent",
+        "Previous_Week_Avg_Yield"
+    ]
+]
 y = df["Milk_Yield_L"]
 
 # Split dataset
@@ -40,9 +51,9 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 # Train XGBoost Model
 model = XGBRegressor(
-    n_estimators=15,
-    learning_rate=0.3,
-    max_depth=2,
+    n_estimators=100,
+    learning_rate=0.1,
+    max_depth=5,
     subsample=0.5,
     colsample_bytree=0.5,
     random_state=42,
@@ -53,6 +64,7 @@ model.fit(X_train, y_train)
 
 # Predictions
 predictions = model.predict(X_test)
+
 
 # Accuracy
 score = r2_score(y_test, predictions)

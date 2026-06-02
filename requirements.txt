@@ -6,3 +6,4 @@ matplotlib
 joblib
 xgboost
 scipy
+seaborn

@@ -454,9 +454,9 @@ elif "Yield" in page:
     with col1:
         st.markdown('<div class="section-title" style="font-size:9px;margin-bottom:12px;">Animal Profile</div>',
                     unsafe_allow_html=True)
-        age            = st.number_input("Age (Months)", min_value=1, value=36)
-        weight         = st.number_input("Weight (kg)", min_value=1, value=500)
-        previous_yield = st.number_input("Previous Week Avg Yield (L)", min_value=0.0, value=22.0)
+        age            = st.number_input("Age (Years)", min_value=0.0, max_value=25.0, value=4.0, step=0.5)
+        weight         = st.number_input("Weight (kg)", min_value=200, max_value=1200, value=500)
+        previous_yield = st.number_input("Previous Week Avg Yield (L)", min_value=0.0, max_value=40.0, value=22.0)
         feed_quantity  = st.number_input("Feed Quantity (kg)", min_value=0.1, value=12.0)
     with col2:
         st.markdown('<div class="section-title" style="font-size:9px;margin-bottom:12px;">Environment</div>',
@@ -465,12 +465,25 @@ elif "Yield" in page:
         temperature  = st.number_input("Ambient Temperature (°C)", value=24.0)
         humidity     = st.number_input("Humidity (%)", min_value=0.0, max_value=100.0, value=65.0)
 
+    if age > 15:
+        st.warning("Older cattle may have reduced milk production.")    
+
     st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("⚡  Run Yield Prediction"):
 
+        if age < 2:
+            st.error("Cow is too young to produce milk.")
+            st.stop()
+
+        if age > 15:
+            st.warning("Older cattle may have reduced milk production.")
+
+
+        age_months = age * 12
+
         input_data = pd.DataFrame({
-            "Age_Months":              [age],
+            "Age_Months":              [age_months],
             "Weight_kg":               [weight],
             "Feed_Quantity_kg":        [feed_quantity],
             "Water_Intake_L":          [water_intake],
@@ -483,6 +496,22 @@ elif "Yield" in page:
                 input_data[col] = 0
         input_data = input_data[model.feature_names_in_]
         prediction = model.predict(input_data)[0]
+
+        if age < 2:
+            prediction = 0
+
+        elif age >= 15 and age < 18:
+            prediction *= 0.75
+
+        elif age >= 18 and age < 20:
+            prediction *= 0.50
+
+        elif age >= 20:
+            prediction = min(prediction, 4)
+
+        if age < 3 and previous_yield > 25:
+            st.error("Previous yield is unrealistically high for a young cow.")
+            st.stop()
 
         st.markdown(f"""
         <div class="result-panel">

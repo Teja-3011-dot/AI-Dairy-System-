@@ -42,8 +42,8 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 # Train SVM Model
 model = SVC(
-    kernel='rbf',
-    C=1,
+    kernel='linear',
+    C=0.5,
     gamma='scale'
 )
 
@@ -61,3 +61,4 @@ print(f"Model Accuracy: {accuracy:.2f}")
 joblib.dump(model, "models/milk_quality_model.pkl")
 
 print("Milk Quality Model Saved Successfully!")
+print(df["Feed_Quantity_kg"].describe())
