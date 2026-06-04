@@ -60,5 +60,6 @@ print(f"Model Accuracy: {accuracy:.2f}")
 # Save model
 joblib.dump(model, "models/milk_quality_model.pkl")
 
+joblib.dump(scaler, "models/milk_quality_scaler.pkl")
+
 print("Milk Quality Model Saved Successfully!")
-print(df["Feed_Quantity_kg"].describe())
