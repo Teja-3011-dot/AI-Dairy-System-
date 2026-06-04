@@ -54,8 +54,8 @@ model = XGBRegressor(
     n_estimators=100,
     learning_rate=0.1,
     max_depth=5,
-    subsample=0.5,
-    colsample_bytree=0.5,
+    subsample=0.8,
+    colsample_bytree=0.8,
     random_state=42,
     objective='reg:squarederror'
 )
@@ -74,4 +74,11 @@ print(f"Model Accuracy (R2 Score): {score:.2f}")
 # Save model
 joblib.dump(model, "models/milk_yield_model.pkl")
 
+
+
+from sklearn.metrics import mean_absolute_error
+
+mae = mean_absolute_error(y_test, predictions)
+
+print(f"Mean Absolute Error: {mae:.2f} litres")
 print("Model saved successfully!")
